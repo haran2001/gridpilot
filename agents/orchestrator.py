@@ -1,6 +1,7 @@
 from google.adk.agents import LlmAgent
 from agents.weather import weather_impact_agent
 from agents.market import market_agent
+from agents.grid import grid_agent
 
 orchestrator = LlmAgent(
     name="Coordinator",
@@ -19,5 +20,5 @@ orchestrator = LlmAgent(
     - ZP26: Solar-dominated, clouds matter more than temperature
     - NP15: Load-dominated, SF/Sacramento temps matter most
     """,
-    sub_agents=[weather_impact_agent, market_agent]
+    sub_agents=[weather_impact_agent, market_agent, grid_agent]
 )

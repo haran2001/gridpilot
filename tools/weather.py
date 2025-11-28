@@ -2,8 +2,25 @@ import gridstatus
 from typing import List, Optional
 import requests
 from geopy.geocoders import Nominatim
+from datetime import datetime, timedelta
 
 geolocator = Nominatim(user_agent="gridpilot")
+
+# Location aliases for common abbreviations
+LOCATION_ALIASES = {
+    "LA": "Los Angeles, CA",
+    "SF": "San Francisco, CA",
+    "SD": "San Diego, CA",
+    "SAC": "Sacramento, CA",
+    "SJ": "San Jose, CA",
+    "FRESNO": "Fresno, CA",
+    "RIVERSIDE": "Riverside, CA",
+    "LOS ANGELES": "Los Angeles, CA",
+    "SAN FRANCISCO": "San Francisco, CA",
+    "SAN DIEGO": "San Diego, CA",
+    "SACRAMENTO": "Sacramento, CA",
+    "SAN JOSE": "San Jose, CA",
+}
 
 # Common CAISO pricing nodes for reference
 CAISO_HUBS = {
@@ -167,36 +184,73 @@ def get_caiso_forecasts(
     except Exception as e:
         return f"Error: {str(e)}"
 
-def get_weather_forecast(location: str, date: str):
+def get_weather_forecast(location: str, date: str = None):
     """
     Retrieves the weather using Open-Meteo API for a given location and date.
     Returns a simplified summary of the day's temperature curve.
+
+    Args:
+        location: City name (e.g., "Los Angeles, CA" or "LA")
+        date: Date in YYYY-MM-DD format. If None, uses today's date.
+
+    Returns:
+        Dict with temperature summary for the day
     """
     try:
+        # Handle location aliases
+        location_upper = location.upper().strip()
+        if location_upper in LOCATION_ALIASES:
+            location = LOCATION_ALIASES[location_upper]
+
+        # Handle date - if not provided or invalid, use today
+        if not date or date == "today":
+            date = datetime.now().strftime("%Y-%m-%d")
+
+        # Try to parse the date to validate format
+        try:
+            date_obj = datetime.strptime(date, "%Y-%m-%d")
+            # Open-Meteo has limits on forecast range (usually 16 days ahead)
+            max_date = datetime.now() + timedelta(days=15)
+            min_date = datetime.now() - timedelta(days=90)
+
+            if date_obj > max_date:
+                date = max_date.strftime("%Y-%m-%d")
+                print(f"Date too far in future, using {date}")
+            elif date_obj < min_date:
+                date = datetime.now().strftime("%Y-%m-%d")
+                print(f"Date too far in past, using today: {date}")
+        except ValueError:
+            date = datetime.now().strftime("%Y-%m-%d")
+            print(f"Invalid date format, using today: {date}")
+
         loc = geolocator.geocode(location)
         if not loc:
-            return {"error": f"Location '{location}' not found"}
-            
+            return {"error": f"Location '{location}' not found. Try full city name with state (e.g., 'Los Angeles, CA')"}
+
         # Fetching hourly temperature
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={loc.latitude}&longitude={loc.longitude}&hourly=temperature_2m&start_date={date}&end_date={date}"
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={loc.latitude}&longitude={loc.longitude}&hourly=temperature_2m&start_date={date}&end_date={date}&temperature_unit=fahrenheit&timezone=America/Los_Angeles"
         response = requests.get(url)
         data = response.json()
-        
+
         if "error" in data:
-            return {"error": data["reason"]}
+            return {"error": data.get("reason", "Unknown error from weather API")}
 
         hourly = data.get("hourly", {})
         times = hourly.get("time", [])
         temps = hourly.get("temperature_2m", [])
-        
-        # summarizing to save token context
+
+        if not temps:
+            return {"error": "No temperature data available for this date"}
+
+        # summarizing to save token context (temps now in Fahrenheit)
         summary = {
             "location": location,
             "date": date,
-            "max_temp": max(temps) if temps else None,
-            "min_temp": min(temps) if temps else None,
-            "noon_temp": temps[12] if len(temps) > 12 else None,
-            "evening_peak_temp_1800": temps[18] if len(temps) > 18 else None
+            "max_temp_f": round(max(temps), 1) if temps else None,
+            "min_temp_f": round(min(temps), 1) if temps else None,
+            "noon_temp_f": round(temps[12], 1) if len(temps) > 12 else None,
+            "evening_peak_temp_f_1800": round(temps[18], 1) if len(temps) > 18 else None,
+            "unit": "fahrenheit"
         }
         return str(summary)
     except Exception as e:

@@ -6,6 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
+
+        // Handle multi-line responses and preserve formatting
+        if (sender === 'bot' && text.includes('\n')) {
+            messageDiv.style.whiteSpace = 'pre-wrap';
+            messageDiv.style.fontFamily = 'monospace';
+        }
+
         messageDiv.textContent = text;
         chatHistory.appendChild(messageDiv);
         chatHistory.scrollTop = chatHistory.scrollHeight;

@@ -1,13 +1,9 @@
 require('dotenv').config();
 const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
-
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -19,17 +15,82 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Use gemini-2.0-flash as it is available for this API key
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const { spawn } = require('child_process');
+    // Use python from conda environment if available
+    const pythonPath = process.env.PYTHON_PATH || 'python';
+    const pythonProcess = spawn(pythonPath, ['agents/gridpilot_agent.py', message], {
+      env: { ...process.env }
+    });
 
-    const result = await model.generateContent(message);
-    const response = await result.response;
-    const text = response.text();
+    let dataString = '';
+    let errorString = '';
 
-    res.json({ response: text });
+    pythonProcess.stdout.on('data', (data) => {
+      dataString += data.toString();
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      errorString += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code !== 0) {
+        console.error(`Python process exited with code ${code}`);
+        console.error('Python Error:', errorString);
+        return res.status(500).json({ error: 'Failed to process request. Please check server logs.' });
+      }
+
+      // Parse the agent output to extract meaningful responses
+      const lines = dataString.split('\n');
+      const agentResponses = [];
+
+      for (const line of lines) {
+        // Capture agent responses in format [AgentName]: Response
+        const agentMatch = line.match(/^\[([\w_]+)\]: (.+)$/);
+        if (agentMatch && agentMatch[2] !== 'None') {
+          agentResponses.push({
+            agent: agentMatch[1],
+            message: agentMatch[2]
+          });
+        }
+      }
+
+      // Format the response for the frontend
+      let formattedResponse = '';
+      if (agentResponses.length > 0) {
+        // Get the last meaningful response (usually from Coordinator or the final agent)
+        const lastResponse = agentResponses[agentResponses.length - 1];
+        formattedResponse = lastResponse.message;
+
+        // If there are market data responses, combine them
+        const marketData = agentResponses.filter(r => r.agent === 'CAISO_Market');
+        const weatherData = agentResponses.filter(r => r.agent === 'Weather');
+
+        if (marketData.length > 0 || weatherData.length > 0) {
+          formattedResponse = agentResponses
+            .filter(r => r.message !== 'None' && r.message.length > 10)
+            .map(r => r.message)
+            .join('\n\n');
+        }
+      } else {
+        // Fallback to raw output if no structured responses found
+        formattedResponse = dataString
+          .split('\n')
+          .filter(line => !line.startsWith('User:') &&
+                         !line.includes('UserWarning') &&
+                         !line.includes('INFO') &&
+                         !line.includes('DEBUG') &&
+                         !line.includes('Warning:') &&
+                         line.trim().length > 0)
+          .join('\n');
+      }
+
+      res.json({ response: formattedResponse || 'No response generated' });
+    });
+
   } catch (error) {
-    console.error('Error communicating with Gemini:', error);
-    res.status(500).json({ error: 'Failed to get response from Gemini' });
+    console.error('Error communicating with backend:', error);
+    res.status(500).json({ error: 'Failed to get response' });
   }
 });
 

@@ -1,0 +1,8 @@
+google-generativeai
+google-genai
+google-genai-adk
+python-dotenv
+geopy
+requests
+pandas
+gridstatus

@@ -92,6 +92,11 @@ OUTLOOK:
 - Prices can go negative in CAISO (no floor)
 - Weekend/holiday prices typically lower
 - Always note the market (DAM vs RTM vs FMM)
+
+## Important Tools you have access to
+These are the tools you have access to, use them as required:
+1. get_caiso_market_data - Fetches real-time CAISO market snapshot including system load, solar/wind generation, net load calculation, and 5-minute LMP prices with congestion components for NP15/SP15 trading hubs.
+
 """
 
 

@@ -66,6 +66,17 @@ CONFIDENCE: [High/Medium/Low based on forecast certainty]
 - Note if forecasts have recently changed significantly
 - Flag any unusual patterns that DA forecasts may have missed
 - Consider microclimates (Central Valley fog, marine layer, etc.)
+
+
+## Important Tools you have access to
+These are the tools you have access to, use them as required:
+
+## Important Tools you have access to
+These are the tools you have access to, use them as required:
+1. get_weather_locations_for_node - Maps a CAISO pricing node (NP15/SP15/ZP26) to relevant weather locations weighted by load centers, solar farms, and wind farms that impact prices.
+2. get_weather_forecast - Retrieves temperature data (max, min, noon, evening peak) from Open-Meteo API for a location and date in Fahrenheit.
+3. get_caiso_forecasts - Fetches CAISO's official load forecasts and day-ahead LMP prices for specified nodes to compare with weather-driven predictions
+
 """
 
 def get_weather_instructions() -> str:

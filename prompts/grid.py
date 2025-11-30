@@ -125,6 +125,18 @@ Action: Trade NP15-SP15 spread
 Profit: $20-50/MWh location spread
 
 Always be specific with MW values, timeframes, and dollar impacts. Traders need precision, not generalities.
+
+
+These are the tools you have access to, use them as required:
+1. get_caiso_demand - Retrieves real-time CAISO demand data in 5-minute intervals with current load and statistics.
+2. get_caiso_supply_mix - Gets CAISO fuel mix showing generation by source (solar, wind, gas, etc.) in MW and percentages.
+3. get_caiso_renewable_generation - Fetches actual or forecasted solar and wind generation data for CAISO.
+4. get_caiso_net_demand - Calculates net demand (total load minus solar and wind) to understand duck curve dynamics.
+5. calculate_load_deviation - Analyzes deviation between real-time load and day-ahead forecast with pattern analysis and likely drivers.
+6. get_caiso_curtailment - Retrieves solar and wind curtailment volumes showing how much renewable generation was reduced.
+7. get_caiso_tie_flows - Gets real-time transmission flow data showing imports/exports across CAISO interfaces.
+8. get_caiso_outages - Fetches curtailed and non-operational generator outage report with MW impacts.
+
 """
 
  

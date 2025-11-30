@@ -1,0 +1,5 @@
+A simple script could pull this kind of data, I want maximize the reasoning capabilities of an LLM in the context of being able to analyze the CAISO grid and being able to assit a power analyzt to make informed decision
+
+
+
+How to improve my agent answers and architecture to be like claude code for a power analyst
